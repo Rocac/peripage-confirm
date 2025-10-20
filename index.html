@@ -1,96 +1,115 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Abrir PeriPage</title>
-  <style>
-    html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#eef2f7;display:grid;place-items:center}
-    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center}
-    .card{background:#fff;border-radius:16px;padding:22px 18px 18px;box-shadow:0 20px 50px rgba(0,0,0,.25);width:min(420px,92vw)}
-    .title{font-weight:800;font-size:18px;color:#101828;margin-bottom:8px}
-    .msg{color:#243248;line-height:1.45;font-size:15px;margin-bottom:20px}
-    .actions{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .btn{padding:12px;border:0;border-radius:12px;font-weight:700;cursor:pointer;font-size:15px}
-    .btn-cancel{background:#f4f6fa;color:#1a2a43}
-    .btn-accept{background:#00a651;color:#fff}
-    .hint{margin-top:10px;font-size:12px;color:#667085;text-align:center}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Abrir PeriPage</title>
+<style>
+  html,body{margin:0;height:100%;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#eef2f7;display:grid;place-items:center}
+  .wrap{width:min(480px,92vw);background:#fff;border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.25);padding:22px 18px}
+  .title{font-weight:800;font-size:18px;color:#101828;margin-bottom:8px}
+  .msg{color:#243248;line-height:1.45;font-size:15px;margin-bottom:16px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:8px}
+  .btn{padding:12px;border:0;border-radius:12px;font-weight:700;cursor:pointer;font-size:15px}
+  .btn-cancel{background:#f4f6fa;color:#1a2a43}
+  .btn-accept{background:#00a651;color:#fff}
+  .warn{display:none;margin-top:12px;padding:10px;border-radius:10px;background:#fff7ed;color:#9a3412;font-size:13px;border:1px solid #fed7aa}
+  .show{display:block}
+</style>
 </head>
 <body>
-  <div class="backdrop">
-    <div class="card">
-      <div class="title">Confirmación</div>
-      <div class="msg">
-        Vas a salir del navegador para continuar con la ejecución en la aplicación <b>PeriPage</b>.<br>
-        ¿Deseas continuar?
+  <div class="wrap">
+    <div class="title">Confirmación</div>
+    <div class="msg">
+      Vas a salir del navegador para continuar con la ejecución en la app <b>PeriPage</b>. ¿Deseas continuar?
+    </div>
+    <div class="row">
+      <button class="btn btn-cancel" id="btnCancel">Cancelar</button>
+      <button class="btn btn-accept" id="btnAccept">Aceptar</button>
+    </div>
+    <div id="inappWarn" class="warn">
+      Estás viendo esto dentro de otra app. Toca los <b>tres puntos (⋮)</b> y elige <b>Abrir en Chrome</b> o <b>Samsung Internet</b>, luego presiona <b>Aceptar</b>.
+      <div style="margin-top:8px">
+        <a id="openInBrowser" class="btn btn-cancel" style="display:inline-block;text-decoration:none;text-align:center">Abrir en navegador</a>
       </div>
-      <div class="actions">
-        <button class="btn btn-cancel" id="btnCancel">Cancelar</button>
-        <button class="btn btn-accept" id="btnAccept">Aceptar</button>
-      </div>
-      <div class="hint">Si no abre, toca el menú “⋮” y elige <b>Abrir en Chrome/Safari</b>.</div>
     </div>
   </div>
 
-  <script>
-    const PLAY = "https://play.google.com/store/apps/details?id=com.ileopard.peripage";
-    const APPLE = "https://apps.apple.com/app/peripage/id1324910312";
-    const PKG = "com.ileopard.peripage";
+<script>
+  const PLAY = "https://play.google.com/store/apps/details?id=com.ileopard.peripage";
+  const APPLE = "https://apps.apple.com/app/peripage/id1324910312";
+  const PKG  = "com.ileopard.peripage";
 
-    // Detección simple
-    const ua = navigator.userAgent;
-    const isAndroid = /Android/i.test(ua);
-    const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const ua = navigator.userAgent;
+  const isAndroid = /Android/i.test(ua);
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
 
-    // Redirección robusta según plataforma
-    function openPeriPage() {
-      let fallbackTimer;
+  // Heurística para detectar navegador embebido (Google App, etc.)
+  const isInApp = (() => {
+    const r = document.referrer || "";
+    // Google App / Discover suele venir con 'google.com' referrer y UA sin "Chrome/" completo
+    const likelyGoogleApp = /google\./i.test(r) && !/Chrome\/\d+/i.test(ua);
+    // Otros embebidos comunes:
+    const patterns = /(instagram|fbav|fb_iab|line|linkedin|pinterest|snapchat|tiktok|gsa)/i;
+    return likelyGoogleApp || patterns.test(ua);
+  })();
 
-      // Si la app se abre, la página pierde visibilidad → cancelamos fallback
-      const cancelFallback = () => { if (fallbackTimer) clearTimeout(fallbackTimer); };
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) cancelFallback();
-      }, { once: true });
-
+  // Botón "Abrir en navegador": reintenta abrir esta misma URL en Chrome/Samsung Internet
+  const openInBrowser = document.getElementById('openInBrowser');
+  openInBrowser.addEventListener('click', (e) => {
+    e.preventDefault();
+    try {
+      // Intenta forzar Chrome vía intent de la misma página (al menos saca del webview)
+      const selfUrl = location.href;
       if (isAndroid) {
-        // Intent URL para Chrome/Android
-        const intentUrl =
-          "intent://open#Intent;scheme=peripage;package="+PKG+
-          ";S.browser_fallback_url="+encodeURIComponent(PLAY)+";end";
-        // El intento debe originarse por gesto del usuario (click)
-        window.location.href = intentUrl;
-
-        // Fallback extra por si el navegador no soporta intent://
-        fallbackTimer = setTimeout(() => { window.location.href = PLAY; }, 1200);
-      } else if (isIOS) {
-        // iOS: esquema directo + iframe hidden como plan B
-        const deeplink = "peripage://open";
-        // Método recomendado
-        window.location.href = deeplink;
-
-        // Fallback a App Store si no pasó nada
-        fallbackTimer = setTimeout(() => { window.location.href = APPLE; }, 1200);
-
-        // Truco iframe (algunos Safari viejos)
-        try {
-          const ifr = document.createElement('iframe');
-          ifr.style.display = 'none';
-          ifr.src = deeplink;
-          document.body.appendChild(ifr);
-          setTimeout(() => { if (ifr.parentNode) document.body.removeChild(ifr); }, 1500);
-        } catch (_) {}
+        const intent =
+          "intent://" + selfUrl.replace(/^https?:\/\//,'') +
+          "#Intent;scheme=https;action=android.intent.action.VIEW;end";
+        location.href = intent;
       } else {
-        // Otras plataformas: sólo mostramos una ayuda
-        alert("Abre este enlace desde tu móvil (Android/iOS) con la app PeriPage instalada.");
+        // iOS: mejor indicar al usuario abrir en Safari (no hay intent genérico)
+        alert("En iPhone, usa el botón Compartir → Abrir en Safari, luego presiona Aceptar.");
       }
-    }
+    } catch(_) {}
+  });
 
-    // Eventos UI
-    document.getElementById('btnAccept').addEventListener('click', openPeriPage);
-    document.getElementById('btnCancel').addEventListener('click', () => {
-      document.querySelector('.backdrop').style.display = 'none';
-    });
-  </script>
+  // Muestra aviso si estamos en un webview
+  if (isInApp) document.getElementById('inappWarn').classList.add('show');
+
+  // Aceptar: abrir PeriPage
+  document.getElementById('btnAccept').addEventListener('click', () => {
+    let fallbackTimer;
+    const cancelFallback = () => fallbackTimer && clearTimeout(fallbackTimer);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) cancelFallback(); }, { once:true });
+
+    if (isAndroid) {
+      // Intent completo con action/category + fallback a Play Store
+      const intentUrl =
+        "intent://open#Intent;scheme=peripage;action=android.intent.action.VIEW;" +
+        "category=android.intent.category.BROWSABLE;package=" + PKG + ";" +
+        "S.browser_fallback_url=" + encodeURIComponent(PLAY) + ";end";
+      location.href = intentUrl;
+      fallbackTimer = setTimeout(() => { location.href = PLAY; }, 1200);
+    } else if (isIOS) {
+      const deeplink = "peripage://open";
+      location.href = deeplink;
+      fallbackTimer = setTimeout(() => { location.href = APPLE; }, 1200);
+      try {
+        const ifr = document.createElement('iframe');
+        ifr.style.display = 'none';
+        ifr.src = deeplink;
+        document.body.appendChild(ifr);
+        setTimeout(() => { if (ifr.parentNode) document.body.removeChild(ifr); }, 1500);
+      } catch(_) {}
+    } else {
+      alert("Abre este enlace desde un móvil Android/iOS con la app PeriPage instalada.");
+    }
+  });
+
+  // Cancelar: cierra la tarjeta (opcional)
+  document.getElementById('btnCancel').addEventListener('click', () => {
+    document.querySelector('.wrap').style.display = 'none';
+  });
+</script>
 </body>
 </html>
