@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Confirmación — Abrir PeriPage</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background: linear-gradient(180deg, #eef2f7, #e6eefc 60%, #eaf2ff);
+      display: grid; place-items: center; padding: 16px;
+      overflow-x: hidden;
+    }
+
+    /* Fondo difuminado */
+    .backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      opacity: 0; visibility: hidden; transition: opacity .18s ease, visibility .18s ease;
+      z-index: 9998;
+    }
+    .modal {
+      position: fixed; inset: 0; display: grid; place-items: center;
+      pointer-events: none; z-index: 9999;
+    }
+    .card {
+      width: min(420px, 92vw);
+      background: #fff; color: #0e1525;
+      border-radius: 16px; padding: 22px 18px 18px;
+      box-shadow: 0 20px 50px rgba(0,0,0,.25);
+      transform: translateY(10px) scale(.98); opacity: 0;
+      transition: transform .18s ease, opacity .18s ease;
+      pointer-events: auto;
+    }
+    .title {
+      font-weight: 800;
+      font-size: 18px;
+      margin-bottom: 8px;
+      color: #101828;
+    }
+    .msg {
+      margin: 6px 2px 20px;
+      color: #243248;
+      line-height: 1.45;
+      font-size: 15px;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .btn {
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 0;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 15px;
+      box-shadow: 0 8px 20px rgba(0,0,0,.08);
+    }
+    .btn-cancel {
+      background: #f4f6fa;
+      color: #1a2a43;
+    }
+    .btn-accept {
+      background: #00a651;
+      color: #fff;
+    }
+
+    /* Estado abierto */
+    body.modal-open .backdrop { opacity: 1; visibility: visible; }
+    body.modal-open .card { transform: translateY(0) scale(1); opacity: 1; }
+
+    @media (prefers-color-scheme: dark) {
+      body { background: linear-gradient(180deg, #0b1320, #0f1d3a 60%, #0b1320); color:#e7f0ff; }
+      .card { background:#0f1d3a; color:#eef6ff; }
+      .msg { color:#cfe1ff; }
+      .btn-cancel { background:#16274a; color:#e7f0ff; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Backdrop y Modal -->
+  <div class="backdrop" id="backdrop" aria-hidden="true"></div>
+  <div class="modal" role="dialog" aria-labelledby="modalTitle" aria-modal="true">
+    <div class="card" role="document">
+      <div class="title" id="modalTitle">Confirmación</div>
+      <div class="msg">
+        Vas a salir del navegador para continuar con la ejecución en la aplicación <b>PeriPage</b>.<br>
+        ¿Deseas continuar?
+      </div>
+      <div class="actions">
+        <button class="btn btn-cancel" id="btnCancel">Cancelar</button>
+        <button class="btn btn-accept" id="btnAccept">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const cancelBtn = document.getElementById('btnCancel');
+    const acceptBtn = document.getElementById('btnAccept');
+    const backdrop  = document.getElementById('backdrop');
+
+    function openModal(){ document.body.classList.add('modal-open'); document.body.style.overflow = 'hidden'; }
+    function closeModal(){ document.body.classList.remove('modal-open'); document.body.style.overflow = ''; }
+
+    cancelBtn.addEventListener('click', closeModal);
+    backdrop.addEventListener('click', closeModal);
+
+    // ACEPTAR → abrir PeriPage
+    acceptBtn.addEventListener('click', () => {
+      closeModal();
+      try { window.location.href = "peripage://open"; } catch(e) {}
+    });
+
+    // Mostrar automáticamente al cargar
+    window.addEventListener('load', openModal);
+  </script>
+</body>
+</html>
